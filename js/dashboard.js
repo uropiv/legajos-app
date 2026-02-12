@@ -57,8 +57,8 @@ async function inicializarLegajo(uid) {
     });
   }
 
-  // Mostrar sección por defecto: Datos Personales
-  mostrarSeccion(uid, "datosPersonales");
+  // Mostrar vista CV por defecto (estilo curriculum vitae)
+  mostrarVistaCV(uid);
 
   // Configurar botones del panel izquierdo
   const botones = panelIzquierdo.querySelectorAll(".btn-seccion");
@@ -70,7 +70,58 @@ async function inicializarLegajo(uid) {
   });
 }
 
-// 🔄 Mostrar sección específica
+// 📄 Mostrar vista CV (curriculum vitae) - inicial por defecto
+async function mostrarVistaCV(uid) {
+  const legajoRef = doc(db, "legajos", uid);
+  const legajoSnap = await getDoc(legajoRef);
+  const data = legajoSnap.data();
+
+  // Foto de perfil (placeholder si no existe)
+  const fotoURL = data.fotoPerfilURL || "https://via.placeholder.com/150?text=Foto+de+Perfil";
+
+  legajoContainer.innerHTML = `
+    <h3>Curriculum Vitae</h3>
+    <div style="text-align:center; margin-bottom:20px;">
+      <img src="${fotoURL}" alt="Foto de Perfil" style="width:150px; height:150px; border-radius:50%; border:2px solid #ccc;">
+    </div>
+    
+    <hr>
+    <h4>Datos Personales</h4>
+    <p><strong>Número de Legajo:</strong> ${data.numeroLegajo || "No especificado"}</p>
+    <p><strong>Apellido y Nombre:</strong> ${data.apellidoNombre || "No especificado"}</p>
+    <p><strong>Jerarquía:</strong> ${data.jerarquia || "No especificado"}</p>
+    <p><strong>Domicilio:</strong> ${data.domicilio || "No especificado"}</p>
+    
+    <hr>
+    <h4>Último Destino</h4>
+    <p>${data.ultimoDestino || "No especificado"}</p>
+    
+    <hr>
+    <h4>Situación de Revista</h4>
+    <p>${data.situacionRevista || "No especificado"}</p>
+    
+    <hr>
+    <h4>Concepto</h4>
+    <p>${data.concepto || "Solo visible para admin"}</p>
+    
+    <hr>
+    <h4>Observaciones Admin</h4>
+    <p>${data.observacionesAdmin || "Solo visible para admin"}</p>
+    
+    <!-- Futuras secciones: armamento, ascensos, licencias, etc. -->
+    <hr>
+    <button id="editarBtn">Editar Perfil</button>
+  `;
+
+  // Botón para editar (muestra el panel izquierdo)
+  const editarBtn = document.getElementById("editarBtn");
+  editarBtn.addEventListener("click", () => {
+    // Opcional: Ocultar CV y mostrar instrucciones, o simplemente usar los botones del panel
+    alert("Usa el panel izquierdo para editar secciones específicas.");
+  });
+}
+
+// 🔄 Mostrar sección específica (editable)
 async function mostrarSeccion(uid, seccion) {
   const legajoRef = doc(db, "legajos", uid);
   const legajoSnap = await getDoc(legajoRef);
@@ -85,6 +136,7 @@ async function mostrarSeccion(uid, seccion) {
         <label>Jerarquía:</label><input type="text" id="jerarquia" value="${data.jerarquia || ""}" required>
         <label>Domicilio:</label><input type="text" id="domicilio" value="${data.domicilio || ""}" required>
         <button id="guardarBtn">Guardar Cambios</button>
+        <button id="volverCVBtn">Volver al CV</button>
       `;
       break;
 
@@ -93,6 +145,7 @@ async function mostrarSeccion(uid, seccion) {
         <h3>Último Destino</h3>
         <label>Último Destino:</label><input type="text" id="ultimoDestino" value="${data.ultimoDestino || ""}" required>
         <button id="guardarBtn">Guardar Cambios</button>
+        <button id="volverCVBtn">Volver al CV</button>
       `;
       break;
 
@@ -101,6 +154,7 @@ async function mostrarSeccion(uid, seccion) {
         <h3>Situación de Revista</h3>
         <label>Situación de Revista:</label><input type="text" id="situacionRevista" value="${data.situacionRevista || ""}" required>
         <button id="guardarBtn">Guardar Cambios</button>
+        <button id="volverCVBtn">Volver al CV</button>
       `;
       break;
 
@@ -108,6 +162,7 @@ async function mostrarSeccion(uid, seccion) {
       legajoContainer.innerHTML = `
         <h3>Concepto (Solo Admin)</h3>
         <label>Concepto:</label><input type="text" id="concepto" value="${data.concepto || ""}" readonly>
+        <button id="volverCVBtn">Volver al CV</button>
       `;
       break;
 
@@ -115,12 +170,19 @@ async function mostrarSeccion(uid, seccion) {
       legajoContainer.innerHTML = `
         <h3>Observaciones Admin (Solo Admin)</h3>
         <label>Observaciones:</label><textarea id="observacionesAdmin" readonly>${data.observacionesAdmin || ""}</textarea>
+        <button id="volverCVBtn">Volver al CV</button>
       `;
       break;
 
     // Futuras secciones: armamento, ascensos, licencias, etc.
     default:
-      legajoContainer.innerHTML = `<p>Sección en construcción...</p>`;
+      legajoContainer.innerHTML = `<p>Sección en construcción...</p><button id="volverCVBtn">Volver al CV</button>`;
+  }
+
+  // Botón volver al CV
+  const volverCVBtn = document.getElementById("volverCVBtn");
+  if (volverCVBtn) {
+    volverCVBtn.addEventListener("click", () => mostrarVistaCV(uid));
   }
 
   // Guardar cambios (si existe botón)
@@ -143,6 +205,7 @@ async function mostrarSeccion(uid, seccion) {
 
       await updateDoc(doc(db, "legajos", uid), actualizaciones);
       alert("Sección actualizada correctamente");
+      mostrarVistaCV(uid); // Regresar al CV después de guardar
     });
   }
 }
