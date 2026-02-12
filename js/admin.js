@@ -125,11 +125,12 @@ function botonesEstado(uid, estado) {
     `;
   }
 
-  if (estado === "bloqueado") {
-    return `
-      <button onclick="cambiarEstado('${uid}', 'activo')">Desbloquear</button>
-    `;
-  }
+if (estado === "bloqueado") {
+  return `
+    <button onclick="cambiarEstado('${uid}', 'pendiente')">Enviar a Pendiente</button>
+  `;
+}
+
 
   return "";
 }
@@ -142,6 +143,7 @@ window.cambiarEstado = async (uid, nuevoEstado) => {
 
   cargarUsuarios();
 };
+
 
 
 
