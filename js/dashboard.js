@@ -1,16 +1,9 @@
 import { auth, db } from "./firebase-config.js";
-import { 
-  onAuthStateChanged, 
-  signOut 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-import { 
-  doc, 
-  getDoc, 
-  setDoc 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const legajoContainer = document.getElementById("legajoContainer");
+const panelIzquierdo = document.getElementById("panelIzquierdo");
 
 // 🔐 Validación de sesión y estado
 onAuthStateChanged(auth, async (user) => {
@@ -30,7 +23,6 @@ onAuthStateChanged(auth, async (user) => {
 
   const data = userSnap.data();
 
-  // Bloquear si no está activo
   if (data.estado !== "activo") {
     alert("Tu cuenta no está activa.");
     await signOut(auth);
@@ -38,16 +30,13 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  // Redirigir admin
   if (data.rol === "admin") {
     window.location.href = "admin.html";
     return;
   }
 
-  // 🔥 Si pasa todas las validaciones → cargar legajo
   await inicializarLegajo(user.uid);
 });
-
 
 // 📁 Crear legajo si no existe
 async function inicializarLegajo(uid) {
@@ -68,60 +57,98 @@ async function inicializarLegajo(uid) {
     });
   }
 
-  await cargarLegajo(uid);
+  // Mostrar sección por defecto: Datos Personales
+  mostrarSeccion(uid, "datosPersonales");
+
+  // Configurar botones del panel izquierdo
+  const botones = panelIzquierdo.querySelectorAll(".btn-seccion");
+  botones.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const seccion = btn.dataset.seccion;
+      mostrarSeccion(uid, seccion);
+    });
+  });
 }
 
-
-// 📄 Mostrar legajo
-async function cargarLegajo(uid) {
+// 🔄 Mostrar sección específica
+async function mostrarSeccion(uid, seccion) {
   const legajoRef = doc(db, "legajos", uid);
   const legajoSnap = await getDoc(legajoRef);
   const data = legajoSnap.data();
 
-  legajoContainer.innerHTML = `
-    <label>Número de Legajo:</label>
-    <input type="text" id="numeroLegajo" value="${data.numeroLegajo || ""}">
+  switch(seccion) {
+    case "datosPersonales":
+      legajoContainer.innerHTML = `
+        <h3>Datos Personales</h3>
+        <label>Número de Legajo:</label><input type="text" id="numeroLegajo" value="${data.numeroLegajo || ""}" required>
+        <label>Apellido y Nombre:</label><input type="text" id="apellidoNombre" value="${data.apellidoNombre || ""}" required>
+        <label>Jerarquía:</label><input type="text" id="jerarquia" value="${data.jerarquia || ""}" required>
+        <label>Domicilio:</label><input type="text" id="domicilio" value="${data.domicilio || ""}" required>
+        <button id="guardarBtn">Guardar Cambios</button>
+      `;
+      break;
 
-    <label>Apellido y Nombre:</label>
-    <input type="text" id="apellidoNombre" value="${data.apellidoNombre || ""}">
+    case "ultimoDestino":
+      legajoContainer.innerHTML = `
+        <h3>Último Destino</h3>
+        <label>Último Destino:</label><input type="text" id="ultimoDestino" value="${data.ultimoDestino || ""}" required>
+        <button id="guardarBtn">Guardar Cambios</button>
+      `;
+      break;
 
-    <label>Jerarquía:</label>
-    <input type="text" id="jerarquia" value="${data.jerarquia || ""}">
+    case "situacionRevista":
+      legajoContainer.innerHTML = `
+        <h3>Situación de Revista</h3>
+        <label>Situación de Revista:</label><input type="text" id="situacionRevista" value="${data.situacionRevista || ""}" required>
+        <button id="guardarBtn">Guardar Cambios</button>
+      `;
+      break;
 
-    <label>Último Destino:</label>
-    <input type="text" id="ultimoDestino" value="${data.ultimoDestino || ""}">
+    case "concepto":
+      legajoContainer.innerHTML = `
+        <h3>Concepto (Solo Admin)</h3>
+        <label>Concepto:</label><input type="text" id="concepto" value="${data.concepto || ""}" readonly>
+      `;
+      break;
 
-    <label>Domicilio:</label>
-    <input type="text" id="domicilio" value="${data.domicilio || ""}">
+    case "observacionesAdmin":
+      legajoContainer.innerHTML = `
+        <h3>Observaciones Admin (Solo Admin)</h3>
+        <label>Observaciones:</label><textarea id="observacionesAdmin" readonly>${data.observacionesAdmin || ""}</textarea>
+      `;
+      break;
 
-    <label>Situación de Revista:</label>
-    <input type="text" id="situacionRevista" value="${data.situacionRevista || ""}">
+    // Futuras secciones: armamento, ascensos, licencias, etc.
+    default:
+      legajoContainer.innerHTML = `<p>Sección en construcción...</p>`;
+  }
 
-    <br><br>
-    <button id="guardarBtn">Guardar Cambios</button>
-  `;
+  // Guardar cambios (si existe botón)
+  const guardarBtn = document.getElementById("guardarBtn");
+  if (guardarBtn) {
+    guardarBtn.addEventListener("click", async () => {
+      const actualizaciones = {};
+      if (seccion === "datosPersonales") {
+        actualizaciones.numeroLegajo = document.getElementById("numeroLegajo").value;
+        actualizaciones.apellidoNombre = document.getElementById("apellidoNombre").value;
+        actualizaciones.jerarquia = document.getElementById("jerarquia").value;
+        actualizaciones.domicilio = document.getElementById("domicilio").value;
+      }
+      if (seccion === "ultimoDestino") {
+        actualizaciones.ultimoDestino = document.getElementById("ultimoDestino").value;
+      }
+      if (seccion === "situacionRevista") {
+        actualizaciones.situacionRevista = document.getElementById("situacionRevista").value;
+      }
 
-  document.getElementById("guardarBtn").addEventListener("click", async () => {
-    await setDoc(doc(db, "legajos", uid), {
-      numeroLegajo: document.getElementById("numeroLegajo").value,
-      apellidoNombre: document.getElementById("apellidoNombre").value,
-      jerarquia: document.getElementById("jerarquia").value,
-      ultimoDestino: document.getElementById("ultimoDestino").value,
-      domicilio: document.getElementById("domicilio").value,
-      situacionRevista: document.getElementById("situacionRevista").value,
-      fotoPerfilURL: data.fotoPerfilURL || "",
-      concepto: data.concepto || "",
-      observacionesAdmin: data.observacionesAdmin || ""
+      await updateDoc(doc(db, "legajos", uid), actualizaciones);
+      alert("Sección actualizada correctamente");
     });
-
-    alert("Legajo actualizado correctamente");
-  });
+  }
 }
-
 
 // 🔓 Botón cerrar sesión
 const logoutBtn = document.getElementById("logoutBtn");
-
 if (logoutBtn) {
   logoutBtn.addEventListener("click", async () => {
     await signOut(auth);
