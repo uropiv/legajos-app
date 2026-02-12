@@ -33,3 +33,15 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 });
+
+
+// Boton de Cerrar Sesion
+const logoutBtn = document.getElementById("logoutBtn");
+
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", async () => {
+    await signOut(auth);
+    window.location.href = "index.html";
+  });
+}
+
