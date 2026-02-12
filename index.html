@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Legajos - Login</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Sistema de Legajos</h1>
+
+    <div class="card">
+      <h2>Login</h2>
+      <input type="email" id="loginEmail" placeholder="Email">
+      <input type="password" id="loginPass" placeholder="Contraseña">
+      <button id="btnLogin">Ingresar</button>
+    </div>
+
+    <div class="card">
+      <h2>Registro</h2>
+      <input type="email" id="regEmail" placeholder="Email">
+      <input type="password" id="regPass" placeholder="Contraseña">
+      <button id="btnRegistro">Registrarse</button>
+    </div>
+  </div>
+
+<script type="module">
+  import { registrar, login } from "./js/auth.js";
+
+  document.getElementById("btnRegistro").onclick = () => {
+    registrar(
+      regEmail.value,
+      regPass.value
+    );
+  };
+
+  document.getElementById("btnLogin").onclick = () => {
+    login(
+      loginEmail.value,
+      loginPass.value
+    );
+  };
+</script>
+
+</body>
+</html>
