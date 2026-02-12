@@ -6,22 +6,37 @@
 </head>
 <body>
   <div class="container">
-<h1>Legajo Personal</h1>
+    <h1>Legajo Personal</h1>
 
-<div id="legajoContainer">
-  <p>Cargando datos...</p>
-</div>
+    <div style="display:flex; gap:20px;">
 
-<hr>
+      <!-- Panel izquierdo: navegación por secciones -->
+      <div id="panelIzquierdo" style="width:200px; border-right:1px solid #ccc; padding-right:10px;">
+        <h3>Secciones</h3>
+        <ul style="list-style:none; padding:0;">
+          <li><button class="btn-seccion" data-seccion="datosPersonales">Datos Personales</button></li>
+          <li><button class="btn-seccion" data-seccion="armamento">Armamento</button></li>
+          <li><button class="btn-seccion" data-seccion="ultimoDestino">Último Destino</button></li>
+          <li><button class="btn-seccion" data-seccion="ascensos">Ascensos</button></li>
+          <li><button class="btn-seccion" data-seccion="situacionRevista">Situación de Revista</button></li>
+          <li><button class="btn-seccion" data-seccion="licencias">Licencias</button></li>
+          <li><button class="btn-seccion" data-seccion="concepto">Concepto</button></li>
+          <li><button class="btn-seccion" data-seccion="observacionesAdmin">Observaciones Admin</button></li>
+        </ul>
+      </div>
 
-<button id="logoutBtn">Cerrar sesión</button>
+      <!-- Panel derecho: sección activa -->
+      <div id="legajoContainer" style="flex:1; padding-left:10px;">
+        <p>Cargando datos...</p>
+      </div>
+
+    </div>
+
+    <hr>
+    <button id="logoutBtn">Cerrar sesión</button>
 
   </div>
-  
+
   <script type="module" src="js/dashboard.js"></script>
-  
 </body>
 </html>
-
-
-
