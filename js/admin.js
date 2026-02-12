@@ -66,28 +66,49 @@ onAuthStateChanged(auth, async (user) => {
 // 🔎 CARGAR TODOS LOS USUARIOS (no solo pendientes)
 async function cargarUsuarios() {
   const snapshot = await getDocs(collection(db, "usuarios"));
-  lista.innerHTML = "";
+  
+  let activos = [];
+  let pendientes = [];
+  let bloqueados = [];
 
   snapshot.forEach(docSnap => {
     const data = docSnap.data();
+    const usuario = { id: docSnap.id, ...data };
 
-    let colorEstado = "#ccc";
-
-    if (data.estado === "activo") colorEstado = "#d4edda";
-    if (data.estado === "pendiente") colorEstado = "#fff3cd";
-    if (data.estado === "bloqueado") colorEstado = "#f8d7da";
-
-    lista.innerHTML += `
-      <div class="card" style="background:${colorEstado}; border:1px solid #999; padding:15px; margin-bottom:10px; border-radius:8px;">
-        <p><strong>Email:</strong> ${data.email}</p>
-        <p><strong>UID:</strong> ${docSnap.id}</p>
-        <p><strong>Estado:</strong> ${data.estado}</p>
-        <p><strong>Rol:</strong> ${data.rol}</p>
-        ${botonesEstado(docSnap.id, data.estado)}
-      </div>
-    `;
+    if (data.estado === "activo") activos.push(usuario);
+    if (data.estado === "pendiente") pendientes.push(usuario);
+    if (data.estado === "bloqueado") bloqueados.push(usuario);
   });
+
+  lista.innerHTML = `
+    <h2>Activos (${activos.length})</h2>
+    ${renderUsuarios(activos, "#d4edda")}
+
+    <h2>Pendientes (${pendientes.length})</h2>
+    ${renderUsuarios(pendientes, "#fff3cd")}
+
+    <h2>Bloqueados (${bloqueados.length})</h2>
+    ${renderUsuarios(bloqueados, "#f8d7da")}
+  `;
 }
+
+// LISTA CONTEO
+function renderUsuarios(arrayUsuarios, colorFondo) {
+  if (arrayUsuarios.length === 0) {
+    return `<p>No hay usuarios en esta categoría.</p>`;
+  }
+
+  return arrayUsuarios.map(user => `
+    <div style="background:${colorFondo}; border:1px solid #999; padding:15px; margin-bottom:10px; border-radius:8px;">
+      <p><strong>Email:</strong> ${user.email}</p>
+      <p><strong>UID:</strong> ${user.id}</p>
+      <p><strong>Estado:</strong> ${user.estado}</p>
+      <p><strong>Rol:</strong> ${user.rol}</p>
+      ${botonesEstado(user.id, user.estado)}
+    </div>
+  `).join("");
+}
+
 
 // 🎛 BOTONES SEGÚN ESTADO
 function botonesEstado(uid, estado) {
@@ -121,5 +142,6 @@ window.cambiarEstado = async (uid, nuevoEstado) => {
 
   cargarUsuarios();
 };
+
 
 
