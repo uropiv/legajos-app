@@ -136,8 +136,12 @@ if (estado === "bloqueado") {
 }
 
 // 🔄 CAMBIAR ESTADO
+const DEBUG = false;
+
 window.cambiarEstado = async (uid, nuevoEstado) => {
-  console.log("Cambiando estado de", uid, "a", nuevoEstado);
+  if (DEBUG) {
+    console.log("Cambiando estado de", uid, "a", nuevoEstado);
+  }
 
   await updateDoc(doc(db, "usuarios", uid), {
     estado: nuevoEstado
@@ -145,6 +149,8 @@ window.cambiarEstado = async (uid, nuevoEstado) => {
 
   cargarUsuarios();
 };
+
+
 
 
 
