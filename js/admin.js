@@ -63,6 +63,7 @@ onAuthStateChanged(auth, async (user) => {
   cargarUsuarios();
 });
 
+// 🔎 CARGAR TODOS LOS USUARIOS (no solo pendientes)
 async function cargarUsuarios() {
   const snapshot = await getDocs(collection(db, "usuarios"));
   lista.innerHTML = "";
@@ -70,30 +71,55 @@ async function cargarUsuarios() {
   snapshot.forEach(docSnap => {
     const data = docSnap.data();
 
-    if (data.estado === "pendiente") {
-      lista.innerHTML += `
-        <div class="card">
-          <p>${data.email} - Estado: ${data.estado}</p>
-          <button onclick="activar('${docSnap.id}')">Activar</button>
-          <button onclick="bloquear('${docSnap.id}')">Bloquear</button>
-          <hr>
-        </div>
-      `;
-    }
+    let colorEstado = "#ccc";
+
+    if (data.estado === "activo") colorEstado = "#d4edda";
+    if (data.estado === "pendiente") colorEstado = "#fff3cd";
+    if (data.estado === "bloqueado") colorEstado = "#f8d7da";
+
+    lista.innerHTML += `
+      <div class="card" style="background:${colorEstado}; border:1px solid #999; padding:15px; margin-bottom:10px; border-radius:8px;">
+        <p><strong>Email:</strong> ${data.email}</p>
+        <p><strong>UID:</strong> ${docSnap.id}</p>
+        <p><strong>Estado:</strong> ${data.estado}</p>
+        <p><strong>Rol:</strong> ${data.rol}</p>
+        ${botonesEstado(docSnap.id, data.estado)}
+      </div>
+    `;
   });
 }
 
-window.activar = async (uid) => {
+// 🎛 BOTONES SEGÚN ESTADO
+function botonesEstado(uid, estado) {
+  if (estado === "pendiente") {
+    return `
+      <button onclick="cambiarEstado('${uid}', 'activo')">Activar</button>
+      <button onclick="cambiarEstado('${uid}', 'bloqueado')">Bloquear</button>
+    `;
+  }
+
+  if (estado === "activo") {
+    return `
+      <button onclick="cambiarEstado('${uid}', 'bloqueado')">Bloquear</button>
+    `;
+  }
+
+  if (estado === "bloqueado") {
+    return `
+      <button onclick="cambiarEstado('${uid}', 'activo')">Desbloquear</button>
+    `;
+  }
+
+  return "";
+}
+
+// 🔄 CAMBIAR ESTADO
+window.cambiarEstado = async (uid, nuevoEstado) => {
   await updateDoc(doc(db, "usuarios", uid), {
-    estado: "activo"
+    estado: nuevoEstado
   });
-  alert("Usuario activado");
+
   cargarUsuarios();
 };
 
-window.bloquear = async (uid) => {
-  await updateDoc(doc(db, "usuarios", uid), {
-    estado: "bloqueado"
-  });
-  cargarUsuarios();
-};
+
