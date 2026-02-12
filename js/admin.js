@@ -1,9 +1,11 @@
-import { db } from "./firebase-config.js";
+import { auth, db } from "./firebase-config.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   collection,
   getDocs,
   updateDoc,
-  doc
+  doc,
+  getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 async function cargarUsuarios() {
@@ -40,4 +42,35 @@ window.bloquear = async (uid) => {
   cargarUsuarios();
 };
 
-cargarUsuarios();
+// 🔒 PROTECCIÓN DE ADMIN
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  const userRef = doc(db, "usuarios", user.uid);
+  const userSnap = await getDoc(userRef);
+
+  if (!userSnap.exists()) {
+    await signOut(auth);
+    window.location.href = "index.html";
+    return;
+  }
+
+  const data = userSnap.data();
+
+  if (data.rol !== "admin") {
+    window.location.href = "dashboard.html";
+    return;
+  }
+
+  if (data.estado !== "activo") {
+    await signOut(auth);
+    window.location.href = "index.html";
+    return;
+  }
+
+  // Solo si pasa todas las validaciones
+  cargarUsuarios();
+});
