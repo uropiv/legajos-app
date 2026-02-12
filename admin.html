@@ -4,8 +4,15 @@
   <title>Panel Admin</title>
 </head>
 <body>
-  <h1>Panel de Administrador</h1>
-  <div id="usuarios"></div>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h1>Panel de Administrador</h1>
+    <button id="logoutBtn">Cerrar Sesión</button>
+    </div>
+
+    <hr>
+
+    <div id="usuarios"></div>
+
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -81,3 +88,4 @@
   </script>
 </body>
 </html>
+
