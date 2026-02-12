@@ -34,8 +34,16 @@ export async function login(email, password) {
   try {
     const cred = await signInWithEmailAndPassword(auth, email, password);
 
-    const userDoc = await getDoc(doc(db, "usuarios", cred.user.uid));
-    const data = userDoc.data();
+    const userRef = doc(db, "usuarios", cred.user.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      alert("No existe perfil asociado a este usuario.");
+      await signOut(auth);
+      return;
+    }
+
+    const data = userSnap.data();
 
     if (data.estado !== "activo") {
       alert("Tu cuenta aún no fue activada.");
@@ -53,3 +61,5 @@ export async function login(email, password) {
     alert(error.message);
   }
 }
+
+
