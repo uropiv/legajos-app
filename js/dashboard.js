@@ -128,17 +128,33 @@ async function mostrarSeccion(uid, seccion) {
   const data = legajoSnap.data();
 
   switch(seccion) {
-    case "datosPersonales":
-      legajoContainer.innerHTML = `
-        <h3>Datos Personales</h3>
-        <label>Número de Legajo:</label><input type="text" id="numeroLegajo" value="${data.numeroLegajo || ""}" required>
-        <label>Apellido y Nombre:</label><input type="text" id="apellidoNombre" value="${data.apellidoNombre || ""}" required>
-        <label>Jerarquía:</label><input type="text" id="jerarquia" value="${data.jerarquia || ""}" required>
-        <label>Domicilio:</label><input type="text" id="domicilio" value="${data.domicilio || ""}" required>
-        <button id="guardarBtn">Guardar Cambios</button>
-        <button id="volverCVBtn">Volver al CV</button>
-      `;
-      break;
+case "datosPersonales":
+  legajoContainer.innerHTML = `
+    <h3>Datos Personales</h3>
+
+    <label>Foto de Perfil:</label><br>
+    <input type="file" id="fotoInput" accept="image/*"><br>
+    <img id="fotoPreview" 
+         src="${data.fotoPerfilURL || "https://via.placeholder.com/150?text=Foto+de+Perfil"}"
+         style="width:150px; height:150px; border-radius:50%; margin-top:10px; border:2px solid #ccc;"><br><br>
+
+    <label>Número de Legajo:</label>
+    <input type="text" id="numeroLegajo" value="${data.numeroLegajo || ""}" required>
+
+    <label>Apellido y Nombre:</label>
+    <input type="text" id="apellidoNombre" value="${data.apellidoNombre || ""}" required>
+
+    <label>Jerarquía:</label>
+    <input type="text" id="jerarquia" value="${data.jerarquia || ""}" required>
+
+    <label>Domicilio:</label>
+    <input type="text" id="domicilio" value="${data.domicilio || ""}" required>
+
+    <button id="guardarBtn">Guardar Cambios</button>
+    <button id="volverCVBtn">Volver al CV</button>
+  `;
+  break;
+
 
     case "ultimoDestino":
       legajoContainer.innerHTML = `
@@ -178,6 +194,45 @@ async function mostrarSeccion(uid, seccion) {
     default:
       legajoContainer.innerHTML = `<p>Sección en construcción...</p><button id="volverCVBtn">Volver al CV</button>`;
   }
+
+  // 📷 Subida de foto a Cloudinary
+const fotoInput = document.getElementById("fotoInput");
+
+if (fotoInput) {
+  fotoInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "legajos_public");
+
+    try {
+      const response = await fetch(
+        "https://api.cloudinary.com/v1_1/doa7l0ksd/image/upload",
+        {
+          method: "POST",
+          body: formData
+        }
+      );
+
+      const dataCloud = await response.json();
+
+      // Guardar URL en Firestore
+      await updateDoc(doc(db, "legajos", uid), {
+        fotoPerfilURL: dataCloud.secure_url
+      });
+
+      alert("Foto subida correctamente");
+      mostrarSeccion(uid, "datosPersonales"); // refresca vista
+
+    } catch (error) {
+      console.error(error);
+      alert("Error al subir la imagen");
+    }
+  });
+}
+
 
   // Botón volver al CV
   const volverCVBtn = document.getElementById("volverCVBtn");
