@@ -6,7 +6,9 @@ import {
   getDoc, 
   collection, 
   getDocs, 
-  updateDoc 
+  updateDoc,
+  addDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -105,6 +107,7 @@ function renderUsuarios(arrayUsuarios, colorFondo) {
       <p><strong>Estado:</strong> ${user.estado}</p>
       <p><strong>Rol:</strong> ${user.rol}</p>
       ${botonesEstado(user.id, user.estado)}
+      <button onclick="verLegajo('${user.id}')" style="margin-top:10px;">Ver Legajo</button>
     </div>
   `).join("");
 }
@@ -150,10 +153,119 @@ window.cambiarEstado = async (uid, nuevoEstado) => {
   cargarUsuarios();
 };
 
+// 👁️ VER LEGAJO DE UN USUARIO
+window.verLegajo = async (uidObjetivo) => {
+  try {
+    const legajoRef = doc(db, "legajos", uidObjetivo);
+    const legajoSnap = await getDoc(legajoRef);
+    
+    if (!legajoSnap.exists()) {
+      alert("Este usuario aún no tiene legajo creado.");
+      return;
+    }
 
+    const data = legajoSnap.data();
+    
+    // Crear modal para mostrar el legajo
+    const modal = document.createElement("div");
+    modal.style.position = "fixed";
+    modal.style.top = "0";
+    modal.style.left = "0";
+    modal.style.width = "100%";
+    modal.style.height = "100%";
+    modal.style.backgroundColor = "rgba(0,0,0,0.7)";
+    modal.style.display = "flex";
+    modal.style.justifyContent = "center";
+    modal.style.alignItems = "center";
+    modal.style.zIndex = "9999";
+    modal.style.overflowY = "auto";
+    modal.id = "modalLegajo";
 
+    const fotoURL = data.fotoPerfilURL || "https://via.placeholder.com/150?text=Foto+de+Perfil";
 
+    modal.innerHTML = `
+      <div style="background:white; padding:30px; width:90%; max-width:800px; border-radius:8px; margin:20px;">
+        <h2>Legajo del Usuario</h2>
+        <div style="text-align:center; margin-bottom:20px;">
+          <img src="${fotoURL}" alt="Foto de Perfil" style="width:150px; height:150px; border-radius:50%; border:2px solid #ccc;">
+        </div>
+        
+        <hr>
+        <h4>Datos Personales</h4>
+        <p><strong>Número de Legajo:</strong> ${data.numeroLegajo || "No especificado"}</p>
+        <p><strong>Apellido y Nombre:</strong> ${data.apellidoNombre || "No especificado"}</p>
+        <p><strong>Jerarquía:</strong> ${data.jerarquia || "No especificado"}</p>
+        <p><strong>Domicilio:</strong> ${data.domicilio || "No especificado"}</p>
+        
+        <hr>
+        <h4>Último Destino</h4>
+        <p>${data.ultimoDestino || "No especificado"}</p>
+        
+        <hr>
+        <h4>Situación de Revista</h4>
+        <p>${data.situacionRevista || "No especificado"}</p>
+        
+        <hr>
+        <h4>Concepto</h4>
+        <p>${data.concepto || "No especificado"}</p>
+        
+        <hr>
+        <h4>Observaciones Admin</h4>
+        <p>${data.observacionesAdmin || "No especificado"}</p>
+        
+        <hr>
+        <button id="enviarSugerenciaBtn" style="margin-top:20px; padding:10px 20px; background:#007bff; color:white; border:none; border-radius:5px; cursor:pointer;">Enviar Sugerencia</button>
+        <button id="cerrarModalBtn" style="margin-top:20px; margin-left:10px; padding:10px 20px; background:#6c757d; color:white; border:none; border-radius:5px; cursor:pointer;">Cerrar</button>
+      </div>
+    `;
 
+    document.body.appendChild(modal);
+
+    // Evento del botón Enviar Sugerencia
+    document.getElementById("enviarSugerenciaBtn")
+      .addEventListener("click", async () => {
+        const mensaje = prompt("Escriba la sugerencia para el usuario:");
+
+        if (!mensaje || mensaje.trim() === "") return;
+
+        await enviarSugerencia(uidObjetivo, mensaje.trim());
+      });
+
+    // Evento del botón Cerrar
+    document.getElementById("cerrarModalBtn")
+      .addEventListener("click", () => {
+        modal.remove();
+      });
+
+    // Cerrar al hacer click fuera del modal
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    });
+
+  } catch (error) {
+    console.error("Error al cargar legajo:", error);
+    alert("Error al cargar el legajo del usuario");
+  }
+};
+
+// 📨 ENVIAR SUGERENCIA AL USUARIO
+async function enviarSugerencia(uidObjetivo, mensaje) {
+  try {
+    await addDoc(collection(db, "legajos", uidObjetivo, "notificaciones"), {
+      mensaje: mensaje,
+      creadaPorUID: auth.currentUser.uid,
+      fecha: serverTimestamp(),
+      leida: false
+    });
+
+    alert("Sugerencia enviada correctamente");
+  } catch (error) {
+    console.error("Error al enviar sugerencia:", error);
+    alert("Error al enviar la sugerencia");
+  }
+}
 
 
 
