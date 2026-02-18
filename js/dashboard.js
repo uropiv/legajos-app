@@ -195,7 +195,7 @@ case "datosPersonales":
       legajoContainer.innerHTML = `<p>Sección en construcción...</p><button id="volverCVBtn">Volver al CV</button>`;
   }
 
-  // 📷 Subida de foto a Cloudinary
+// 📷 Subida de foto a Cloudinary PRO
 const fotoInput = document.getElementById("fotoInput");
 
 if (fotoInput) {
@@ -203,35 +203,64 @@ if (fotoInput) {
     const file = e.target.files[0];
     if (!file) return;
 
+    // 🔒 Validar tamaño máximo (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert("La imagen no debe superar los 2MB");
+      return;
+    }
+
+    // 📦 Loader + barra de progreso
+    legajoContainer.insertAdjacentHTML("beforeend", `
+      <div id="uploadStatus" style="margin-top:10px;">
+        <p>Subiendo imagen...</p>
+        <progress id="progressBar" value="0" max="100" style="width:200px;"></progress>
+      </div>
+    `);
+
+    const progressBar = document.getElementById("progressBar");
+
+    // 📉 Comprimir imagen antes de subir (resize a 400px ancho)
+    const compressedFile = await compressImage(file, 0.7);
+
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", compressedFile);
     formData.append("upload_preset", "legajos_public");
 
-    try {
-      const response = await fetch(
-        "https://api.cloudinary.com/v1_1/doa7l0ksd/image/upload",
-        {
-          method: "POST",
-          body: formData
-        }
-      );
+    // 📁 Organizar por UID en Cloudinary
+    formData.append("folder", `legajos/${uid}`);
 
-      const dataCloud = await response.json();
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "https://api.cloudinary.com/v1_1/doa7l0ksd/image/upload");
 
-      // Guardar URL en Firestore
+    xhr.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable) {
+        const percent = Math.round((event.loaded / event.total) * 100);
+        progressBar.value = percent;
+      }
+    });
+
+    xhr.onload = async () => {
+      const response = JSON.parse(xhr.responseText);
+
       await updateDoc(doc(db, "legajos", uid), {
-        fotoPerfilURL: dataCloud.secure_url
+        fotoPerfilURL: response.secure_url
       });
 
-      alert("Foto subida correctamente");
-      mostrarSeccion(uid, "datosPersonales"); // refresca vista
+      document.getElementById("uploadStatus").remove();
 
-    } catch (error) {
-      console.error(error);
+      alert("Foto subida correctamente");
+      mostrarSeccion(uid, "datosPersonales");
+    };
+
+    xhr.onerror = () => {
       alert("Error al subir la imagen");
-    }
+      document.getElementById("uploadStatus").remove();
+    };
+
+    xhr.send(formData);
   });
 }
+
 
 
   // Botón volver al CV
@@ -273,3 +302,34 @@ if (logoutBtn) {
     window.location.href = "index.html";
   });
 }
+
+// 📉 Función para comprimir imagen
+function compressImage(file, quality) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 400;
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(
+          (blob) => {
+            resolve(new File([blob], file.name, { type: "image/jpeg" }));
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+    };
+  });
+}
+
