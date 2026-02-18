@@ -9,6 +9,7 @@ import {
   addDoc, 
   getDocs, 
   query, 
+  where,
   orderBy, 
   serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -75,6 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   await inicializarLegajo(user.uid, rolUsuario);
+  await verificarNotificaciones(user.uid);
   });
 });
 
@@ -491,39 +493,114 @@ async function mostrarHistorial(uid, rolUsuario) {
     return;
   }
 
-  const historialRef = collection(db, "legajos", uid, "historial");
-  const q = query(historialRef, orderBy("fecha", "desc"));
-  const snapshot = await getDocs(q);
+  try {
+    const historialRef = collection(db, "legajos", uid, "historial");
+    const q = query(historialRef, orderBy("fecha", "desc"));
+    const snapshot = await getDocs(q);
 
-  let historialHTML = `<h3>Historial Completo del Legajo</h3>`;
+    let historialHTML = `<h3>Historial Completo del Legajo</h3>`;
 
-  if (snapshot.empty) {
-    historialHTML += `<p>No hay registros aún.</p>`;
-  } else {
-    snapshot.forEach(docSnap => {
-      const h = docSnap.data();
-      const fecha = h.fecha?.toDate().toLocaleString() || "Sin fecha";
+    if (snapshot.empty) {
+      historialHTML += `<p>No hay registros aún.</p>`;
+    } else {
+      snapshot.forEach(docSnap => {
+        const h = docSnap.data();
+        const fecha = h.fecha?.toDate().toLocaleString() || "Sin fecha";
 
-      historialHTML += `
-        <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
-          <strong>Tipo:</strong> ${escapeHtml(h.tipo)}<br>
-          <strong>Campo:</strong> ${escapeHtml(h.campo)}<br>
-          <strong>Antes:</strong> ${escapeHtml(h.valorAnterior || "—")}<br>
-          <strong>Ahora:</strong> ${escapeHtml(h.valorNuevo || "—")}<br>
-          <strong>Rol:</strong> ${escapeHtml(h.rol)}<br>
-          <strong>UID:</strong> ${escapeHtml(h.modificadoPorUID)}<br>
-          <strong>Fecha:</strong> ${escapeHtml(fecha)}
-        </div>
-      `;
-    });
+        historialHTML += `
+          <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
+            <strong>Tipo:</strong> ${escapeHtml(h.tipo)}<br>
+            <strong>Campo:</strong> ${escapeHtml(h.campo)}<br>
+            <strong>Antes:</strong> ${escapeHtml(h.valorAnterior || "—")}<br>
+            <strong>Ahora:</strong> ${escapeHtml(h.valorNuevo || "—")}<br>
+            <strong>Rol:</strong> ${escapeHtml(h.rol)}<br>
+            <strong>UID:</strong> ${escapeHtml(h.modificadoPorUID)}<br>
+            <strong>Fecha:</strong> ${escapeHtml(fecha)}
+          </div>
+        `;
+      });
+    }
+
+    historialHTML += `<button id="volverCVBtn">Volver al CV</button>`;
+
+    legajoContainer.innerHTML = historialHTML;
+
+    const volverCVBtn = document.getElementById("volverCVBtn");
+    if (volverCVBtn) {
+      volverCVBtn.addEventListener("click", () => mostrarVistaCV(uid, rolUsuario));
+    }
+  } catch (error) {
+    console.error("Error al cargar historial:", error);
+    legajoContainer.innerHTML = `
+      <h3>Error al cargar el historial</h3>
+      <p style="color:red;">No tienes permisos para ver el historial o hay un error de configuración.</p>
+      <p><strong>Error:</strong> ${escapeHtml(error.message)}</p>
+      <button id="volverCVBtn">Volver al CV</button>
+    `;
+    
+    const volverCVBtn = document.getElementById("volverCVBtn");
+    if (volverCVBtn) {
+      volverCVBtn.addEventListener("click", () => mostrarVistaCV(uid, rolUsuario));
+    }
   }
+}
 
-  historialHTML += `<button id="volverCVBtn">Volver al CV</button>`;
+// 🔔 Verificar notificaciones no leídas
+async function verificarNotificaciones(uid) {
+  try {
+    const notiRef = collection(db, "legajos", uid, "notificaciones");
+    const q = query(notiRef, where("leida", "==", false));
+    const snapshot = await getDocs(q);
 
-  legajoContainer.innerHTML = historialHTML;
+    if (snapshot.empty) return;
 
-  const volverCVBtn = document.getElementById("volverCVBtn");
-  if (volverCVBtn) {
-    volverCVBtn.addEventListener("click", () => mostrarVistaCV(uid, rolUsuario));
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      mostrarModalNotificacion(uid, docSnap.id, data.mensaje);
+    });
+  } catch (error) {
+    console.error("Error al verificar notificaciones:", error);
+  }
+}
+
+// 🔔 Mostrar modal de notificación
+function mostrarModalNotificacion(uid, notiId, mensaje) {
+  const modal = document.createElement("div");
+  modal.style.position = "fixed";
+  modal.style.top = "0";
+  modal.style.left = "0";
+  modal.style.width = "100%";
+  modal.style.height = "100%";
+  modal.style.backgroundColor = "rgba(0,0,0,0.7)";
+  modal.style.display = "flex";
+  modal.style.justifyContent = "center";
+  modal.style.alignItems = "center";
+  modal.style.zIndex = "9999";
+
+  modal.innerHTML = `
+    <div style="background:white; padding:30px; width:400px; border-radius:8px; text-align:center;">
+      <h3>Sugerencia del Administrador</h3>
+      <p style="margin:20px 0;">${escapeHtml(mensaje)}</p>
+      <button id="marcarLeidoBtn">Marcar como leído</button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const marcarLeidoBtn = document.getElementById("marcarLeidoBtn");
+  if (marcarLeidoBtn) {
+    marcarLeidoBtn.addEventListener("click", async () => {
+      try {
+        await updateDoc(
+          doc(db, "legajos", uid, "notificaciones", notiId),
+          { leida: true }
+        );
+
+        modal.remove();
+      } catch (error) {
+        console.error("Error al marcar notificación como leída:", error);
+        alert("Error al marcar la notificación como leída");
+      }
+    });
   }
 }
